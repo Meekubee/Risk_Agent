@@ -1,0 +1,9 @@
+llama_parse
+sentence-transformers 
+chromadb
+langchain 
+autogen-agentchat
+autogen-ext
+fastAPI
+tiktoken
+uvicorn

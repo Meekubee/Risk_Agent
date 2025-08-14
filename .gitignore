@@ -1,0 +1,22 @@
+# Virtual environments
+risk_env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+
+# Uploaded PDFs (user-provided inputs)
+data/
+
+# Generated Markdown files (runtime output)
+*.md
+!README.md
+
+# OS-specific files
+.DS_Store
+Thumbs.db
