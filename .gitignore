@@ -1,5 +1,16 @@
+# Virtual environments (any folder ending with _env or venv)
+*_env/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+
 # OS-specific files
 .DS_Store
 Thumbs.db
-
-risk_env/
