@@ -1,6 +1,6 @@
 # Risk Agent
 
-It processes uploaded documents (PDFs) using **LlamaParse** and an **LLM model**, generating a **risk register** based on the provided scope, requirements, and historical risk data. Aims to ease and fasten the risk identification, risk analysis, and risk mitigation process in the project planning phase in PMPs
+It processes uploaded documents (PDFs) using **LlamaParse**, **FastAPI Endpoints** and **LLMs**, generating a **risk register** based on the provided scope, requirements, and historical risk data. Aims to ease and fasten the risk identification, risk analysis, and risk mitigation process in the project planning phase in PMPs
 
 ---
 
