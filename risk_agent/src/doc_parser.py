@@ -5,6 +5,11 @@ import os
 from dotenv import load_dotenv
 import time
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DOCS_DIR = os.path.join(BASE_DIR, "..", "docs")
+os.makedirs(DOCS_DIR, exist_ok=True)
+
+
 load_dotenv()
 llamaparse_api_key = os.getenv('LLAMA_CLOUD_API_KEY')
 
@@ -44,19 +49,20 @@ def process_documents(scope_path, requirements_path, risks_path):
     except ValueError as e:
         raise e
 
-    risk_file_name = "risk_doc.md"
-    with open(risk_file_name, 'w') as file:
-        file.write(risk_doc.text)
+    risk_file_path = os.path.join(DOCS_DIR, "risk_doc.md")
+    with open(risk_file_path, "w", encoding="utf-8") as f:
+        f.write(risk_doc.text)
 
-    req_file_name = "req_doc.md"
-    with open(req_file_name, 'w') as file:
-        file.write(req_doc.text)
+    req_file_path = os.path.join(DOCS_DIR, "req_doc.md")
+    with open(req_file_path, "w", encoding="utf-8") as f:
+        f.write(req_doc.text)
 
-    scope_file_name = "scope_doc.md"
-    with open(scope_file_name, 'w') as file:
-        file.write(scope_doc.text)
+    scope_file_path = os.path.join(DOCS_DIR, "scope_doc.md")
+    with open(scope_file_path, "w", encoding="utf-8") as f:
+        f.write(scope_doc.text)
 
-    return [risk_file_name, req_file_name, scope_file_name]
+
+    return [risk_file_path, req_file_path, scope_file_path]
 
 if __name__ == "__main__":
     # Your local test code here

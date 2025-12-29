@@ -1,3 +1,4 @@
+import logging
 import asyncio
 from autogen_agentchat.agents import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
@@ -10,9 +11,10 @@ import re
 import os
 
 from dotenv import load_dotenv
-from rag_ingest import collection
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 gemini_api_key = os.getenv('GEMINI_API_KEY')
 gemini_endpoint = os.getenv('GEMINI_ENDPOINT')
@@ -48,64 +50,73 @@ def extract_and_print_json(content: str):
         print("No JSON block found in response.")
         print("Full content:\n", content)
 
-async def query_documents(query_text, n_results=5):
-    """
-    Query the vector store for relevant documents (async version)
-    """
-    try:
-        results = collection.query(
-            query_texts=[query_text],
-            n_results=n_results,
-            include=["documents", "metadatas"]
-        )
-        context_parts = []
-        for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
-            source = metadata.get('source', 'unknown')
-            doc_type = metadata.get('doc_type', 'unknown')
-            context_parts.append(f"[Source: {source} - {doc_type}]\n{doc}\n")
-        return "\n".join(context_parts)
-    except Exception as e:
-        print(f"Error querying documents: {e}")
-        return "No relevant documents found."
+async def query_documents(collection, query_text, n_results=5):
+    results = collection.query(
+        query_texts=[query_text],
+        n_results=n_results,
+        include=["documents", "metadatas"]
+    )
+    return results
 
 risk_agent = AssistantAgent(
     "risk_analyzer",
     model_client=model_client,
     system_message="""
-You are a risk analysis expert with access to project documentation.
+You are a risk analysis expert.
 
-When answering questions:
-1. I will provide you with the scope and requirements documents of the current project, and a historical risk document for formatting reference only.
-2. Always cite the source of your information using the [Source: ...] tags provided.
-3. Your job is to generate a new risk register FOR the current project based on the scope and requirements. Do not copy risks from the historical document.
-4. For each new risk register, the RISK_ID must start at 1 and increment sequentially.
-5. Clearly state RISK_ID, RISK_DESCRIPTION, LIKELIHOOD, IMPACT, and MITIGATION PLAN for the generated risk register. The output must be a single JSON body containing a list of risk objects.
-""",
+IMPORTANT OUTPUT RULES (MANDATORY):
+- Respond with ONLY valid JSON
+- Do NOT include explanations or markdown
+- Do NOT wrap output in ``` fences
+- The response MUST be directly parseable by json.loads()
+- The root element MUST be a JSON array
+
+Each object in the array MUST contain:
+- RISK_ID (int, starting from 1, sequential)
+- RISK_DESCRIPTION (string)
+- LIKELIHOOD (string)
+- IMPACT (string)
+- MITIGATION_PLAN (string)
+
+Use the provided context as the primary reference.
+Infer and generate plausible risks that logically arise from the project scope and requirements.
+Do NOT copy risks verbatim from historical documents.
+Do NOT invent risks unrelated to the project.
+"""
 )
 
-async def chat_with_rag(user_question: str) -> str:
+
+async def chat_with_rag(collection, user_question: str) -> str:
     """
     RAG-powered function to:
     1. Retrieve context from vector DB
     2. Send query to the risk_analyzer agent
     3. Return the agent's response (as string)
     """
-    print(f"[User Question] {user_question}")
-    print("[RAG] Retrieving relevant documents...")
-    context = await query_documents(user_question)
+    logging.info(f"[User Question] {user_question}")
+    logging.info("[RAG] Retrieving relevant documents...")
+    context = await query_documents(collection, user_question)
+    logging.info(f"Context retrieved from vector store:\n{context}")
+
+    # Extract document text from the context
+    retrieved_docs = context.get("documents", [[]])[0]
+    context_str = "\n\n".join(retrieved_docs)
+    logging.info(f"Formatted context string:\n{context_str}")
 
     prompt = f"""Context from project documents:
-{context}
+{context_str}
 
 User question: {user_question}
 
-Please answer based on the provided context and cite your sources."""
+Please answer based on the provided context."""
+    logging.info(f"Prompt sent to agent:\n{prompt}")
 
     token = CancellationToken()
     user_msg = TextMessage(content=prompt, source="user")
 
-    print("[Agent] Sending prompt to risk_analyzer agent...")
+    logging.info("[Agent] Sending prompt to risk_analyzer agent...")
     response = await risk_agent.on_messages([user_msg], cancellation_token=token)
+    logging.info(f"Raw response from agent:\n{response.chat_message.content}")
 
     return response.chat_message.content  # Return the actual string content
 

@@ -7,3 +7,5 @@ autogen-ext
 fastAPI
 tiktoken
 uvicorn
+langchain_text_splitters
+openai

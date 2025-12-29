@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+risk_env/
+
+# Temporary reports
+risk_agent/src/temp_reports/
+
+# Vector Store
+risk_agent/src/rag_vector_store/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

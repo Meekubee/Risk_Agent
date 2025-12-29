@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Risk Agent</h1>
+
+        <div class="bg-black p-6 rounded-lg shadow-lg mb-4">
+            <h2 class="text-2xl font-bold mb-4">1. Upload Documents</h2>
+            <form id="upload-form" class="space-y-4">
+                <div>
+                    <label for="scope_statement" class="block text-sm font-medium text-gray-700">Scope Statement (PDF)</label>
+                    <input type="file" name="scope_statement" id="scope_statement" accept=".pdf" class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
+                </div>
+                <div>
+                    <label for="requirements_document" class="block text-sm font-medium text-gray-700">Requirements Document (PDF)</label>
+                    <input type="file" name="requirements_document" id="requirements_document" accept=".pdf" class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
+                </div>
+                <div>
+                    <label for="past_risk_register" class="block text-sm font-medium text-gray-700">Past Risk Register (PDF)</label>
+                    <input type="file" name="past_risk_register" id="past_risk_register" accept=".pdf" class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600">Upload</button>
+            </form>
+            <div id="upload-status" class="mt-4"></div>
+        </div>
+
+        <div class="bg-black p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold mb-4">2. Generate Risk Register</h2>
+            <button id="generate-button" class="w-full bg-green-500 text-white p-2 rounded-lg hover:bg-green-600">Generate</button>
+            <div id="generate-status" class="mt-4"></div>
+            <div id="result" class="mt-4 bg-gray-50 p-4 rounded-lg hidden">
+                <h3 class="text-xl font-bold mb-2">Generated Risk Register</h3>
+                <div class="overflow-x-auto">
+                    <table id="result-table" class="min-w-full bg-white">
+                        <thead class="bg-gray-800 text-white">
+                            <tr>
+                                <th class="py-2 px-4">ID</th>
+                                <th class="py-2 px-4">Description</th>
+                                <th class="py-2 px-4">Likelihood</th>
+                                <th class="py-2 px-4">Impact</th>
+                                <th class="py-2 px-4">Mitigation Plan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="download-buttons" class="mt-4 text-right hidden">
+                    <button id="download-pdf" class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600">Download as PDF</button>
+                    <button id="download-docx" class="bg-blue-700 text-white p-2 rounded-lg hover:bg-blue-800">Download as DOCX</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadForm = document.getElementById('upload-form');
+        const uploadStatus = document.getElementById('upload-status');
+        const generateButton = document.getElementById('generate-button');
+        const generateStatus = document.getElementById('generate-status');
+        const resultDiv = document.getElementById('result');
+        const resultTable = document.getElementById('result-table').getElementsByTagName('tbody')[0];
+        const downloadButtons = document.getElementById('download-buttons');
+        const downloadPdfButton = document.getElementById('download-pdf');
+        const downloadDocxButton = document.getElementById('download-docx');
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            uploadStatus.textContent = 'Uploading...';
+            uploadStatus.classList.remove('text-red-500', 'text-green-500');
+
+            const formData = new FormData();
+            formData.append('files', document.getElementById('scope_statement').files[0]);
+            formData.append('files', document.getElementById('requirements_document').files[0]);
+            formData.append('files', document.getElementById('past_risk_register').files[0]);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    uploadStatus.textContent = 'Upload successful!';
+                    uploadStatus.classList.add('text-green-500');
+                } else {
+                    const error = await response.json();
+                    uploadStatus.textContent = `Upload failed: ${error.detail}`;
+                    uploadStatus.classList.add('text-red-500');
+                }
+            } catch (error) {
+                uploadStatus.textContent = 'An error occurred during upload.';
+                uploadStatus.classList.add('text-red-500');
+                console.error(error);
+            }
+        });
+
+        generateButton.addEventListener('click', async () => {
+            generateStatus.textContent = 'Generating...';
+            generateStatus.classList.remove('text-red-500', 'text-green-500');
+            resultDiv.classList.add('hidden');
+            downloadButtons.classList.add('hidden');
+            resultTable.innerHTML = ''; // Clear previous results
+
+            try {
+                const response = await fetch('/risk-register', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    generateStatus.textContent = 'Generation complete!';
+                    generateStatus.classList.add('text-green-500');
+
+                    data.forEach(risk => {
+                        const row = resultTable.insertRow();
+                        row.innerHTML = `
+                            <td class="border px-4 py-2">${risk.RISK_ID}</td>
+                            <td class="border px-4 py-2">${risk.RISK_DESCRIPTION}</td>
+                            <td class="border px-4 py-2">${risk.LIKELIHOOD}</td>
+                            <td class="border px-4 py-2">${risk.IMPACT}</td>
+                            <td class="border px-4 py-2">${risk.MITIGATION_PLAN}</td>
+                        `;
+                    });
+
+                    resultDiv.classList.remove('hidden');
+                    downloadButtons.classList.remove('hidden');
+                } else {
+                    const error = await response.json();
+                    generateStatus.textContent = `Generation failed: ${error.detail}`;
+                    generateStatus.classList.add('text-red-500');
+                }
+            } catch (error) {
+                generateStatus.textContent = 'An error occurred during generation.';
+                generateStatus.classList.add('text-red-500');
+                console.error(error);
+            }
+        });
+
+        downloadPdfButton.addEventListener('click', () => {
+            window.location.href = '/download-report?format=pdf';
+        });
+
+        downloadDocxButton.addEventListener('click', () => {
+            window.location.href = '/download-report?format=docx';
+        });
+    </script>
+</body>
+</html>
